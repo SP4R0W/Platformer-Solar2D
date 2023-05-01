@@ -1,9 +1,9 @@
 local composer = require( "composer" )
 local physics = require("physics")
 local widget = require("widget")
- 
+
 local scene = composer.newScene()
- 
+
 local buttonNormalSprite = "Images/buttonNormal.png"
 local font = "screengem.ttf"
 local filePath = system.pathForFile("Data/highscores.json")
@@ -22,7 +22,6 @@ local coinSound
 local doorSound
 
 local bgGroup
-local uiGroup
 local playerGroup
 local objectsGroup
 local platformGroup
@@ -37,14 +36,13 @@ local scoreText
 local timeText
 local livesText
 
+local floor
 local key
 local doorEnd
 
 local player
 local playerX = 0
 local playerXSpeed = 2.5
-local jumpPower = -0.2
-local jump = false
 local touchingSpike = false
 local whichSpike = 0
 local keyPressed = ""
@@ -52,11 +50,12 @@ local keyPressed = ""
 local timeTimer
 local spikeTimer
 local checkSpikesCollision
+local spikeCheckTimer
 
 local platformSheet
-local platformSprites = 
+local platformSprites =
 {
-    frames = 
+    frames =
     {
         { -- 1
             x = 0,
@@ -109,7 +108,7 @@ local platformSprites =
     }
 }
 
-local coinSequence = 
+local coinSequence =
 {
     {
         name = "blink",
@@ -120,14 +119,14 @@ local coinSequence =
     }
 }
 
-local coinOptions = 
+local coinOptions =
 {
     width = 33,
     height = 32,
     numFrames = 6
 }
 
-local doorSequence = 
+local doorSequence =
 {
     {
         name = "closed",
@@ -139,14 +138,14 @@ local doorSequence =
     }
 }
 
-local doorOptions = 
+local doorOptions =
 {
     width = 64,
     height = 81,
     numFrames = 2
 }
 
-local spikeSequence = 
+local spikeSequence =
 {
     {
         name = "active",
@@ -158,14 +157,14 @@ local spikeSequence =
     }
 }
 
-local spikesOptions = 
+local spikesOptions =
 {
     width = 64,
     height = 40,
     numFrames = 2
 }
 
-local teleportSequence = 
+local teleportSequence =
 {
     {
         name = "closed",
@@ -177,7 +176,7 @@ local teleportSequence =
     }
 }
 
-local teleportOptions = 
+local teleportOptions =
 {
     width = 64,
     height = 96,
@@ -193,7 +192,7 @@ local coins = {}
 local platforms = {}
 local spikes = {}
 local teleports = {}
-local teleportCoordinates = 
+local teleportCoordinates =
 {{display.contentCenterX - 400,display.contentCenterY + 65},
 {display.contentCenterX - 225,display.contentCenterY- 85},
 {display.contentCenterX + 480,display.contentCenterY - 200},
@@ -263,7 +262,7 @@ local function movePlayer()
 
     player.x = playerX
 end
- 
+
 local function onPressed(event)
     if event.phase == "down" then
         local key = event.keyName
@@ -284,13 +283,14 @@ end
 
 local function resetPlayer()
     player.alpha = 1
+
     playerX = display.contentCenterX- 450
     player.y = display.contentCenterY-250
+
     lives = lives - 1
     livesText.text = "Lives: " .. lives
-    if lives == 0 then
-        levelLose()
-    end
+
+    if lives == 0 then levelLose() end
 end
 
 local function updateLevel()
@@ -306,11 +306,6 @@ end
 
 local function addScore()
     score = score + 100
-    scoreText.text = "Score: " .. tostring(score)
-end
-
-local function subtractScore()
-    score = score - 100
     scoreText.text = "Score: " .. tostring(score)
 end
 
@@ -339,14 +334,10 @@ local function checkSpikesCollision()
 end
 
 local function onCollision(event)
+    local obj1 = event.object1
+    local obj2 = event.object2
+
     if event.phase == "began" then
-        local obj1 = event.object1
-        local obj2 = event.object2
-        print(obj1.myName,obj2.myName)
-        
-        if obj1.myName == "platform" or obj2.myName == "platform" then
-            jump = false
-        end
 
         if obj1.myName == "key" or obj2.myName == "key" then
             display.remove(key)
@@ -364,10 +355,6 @@ local function onCollision(event)
             for i = #spikes, 1, -1 do
 				if spikes[i] == obj1 or spikes[i] == obj2 then
                     whichSpike = i
-                    --if spikes[i].sequence == "active" then
-                        --player.alpha = 0
-                        --timer.performWithDelay(100,resetPlayer,1)
-                    --end
                     break
 				end
 			end
@@ -389,9 +376,11 @@ local function onCollision(event)
             for i = #coins, 1, -1 do
 				if coins[i] == obj1 or coins[i] == obj2 then
                     coinsCollected = coinsCollected + 1
+
                     if coinsCollected == 5 then
                         score = score + 500
                     end
+
                     audio.play(coinSound,{channel=3})
                     display.remove(coins[i])
                     addScore()
@@ -400,20 +389,30 @@ local function onCollision(event)
 			end
         end
     elseif event.phase == "ended" then
-        local obj1 = event.object1
-        local obj2 = event.object2
-
         if obj1.myName == "spike" or obj2.myName == "spike" then
             touchingSpike = false
             whichSpike = 0
+        end
+
+        if obj1.myName == "key" or obj2.myName == "key" then
+            physics.removeBody(key)
+        end
+
+        if obj1.myName == "coin" or obj2.myName == "coin" then
+            for i = #coins, 1, -1 do
+				if coins[i] == obj1 or coins[i] == obj2 then
+                    physics.removeBody(coins[i])
+                    break
+				end
+			end
         end
     end
 end
 
 -- create()
 function scene:create( event )
- 
-    local sceneGroup = self.view 
+
+    local sceneGroup = self.view
     buttonClicked = audio.loadSound("Audio/buttonClicked.mp3")
     teleportSound = audio.loadSound("Audio/teleport.mp3")
     coinSound = audio.loadSound("Audio/coin.mp3")
@@ -424,7 +423,6 @@ function scene:create( event )
     platformGroup = display.newGroup()
     objectsGroup = display.newGroup()
     playerGroup = display.newGroup()
-    uiGroup = display.newGroup()
 
     background = display.newImageRect(bgGroup,"Images/bg.png",1024,768)
     background.x = display.contentCenterX
@@ -489,7 +487,7 @@ function scene:create( event )
     platforms[9] = display.newImage(platformSheet,2,992,224); platforms[9].myName = "platform"
 
     platforms[10] = display.newImage(platformSheet,2,944,416); platforms[10].myName = "platform"
-  
+
     platforms[11] = display.newImage(platformSheet,2,944,544); platforms[11].myName = "platform"
 
     platforms[12] = display.newImage(platformSheet,2,800,352); platforms[12].myName = "platform"
@@ -638,6 +636,22 @@ function scene:create( event )
     coins[5].myName = "coin"
     coins[5]:play()
 
+    for x = 1,#coins do
+        sceneGroup:insert(coins[x])
+    end
+
+    for x = 1,#teleports do
+        sceneGroup:insert(teleports[x])
+    end
+
+    for x = 1,#platforms do
+        sceneGroup:insert(platforms[x])
+    end
+
+    for x = 1,#spikes do
+        sceneGroup:insert(spikes[x])
+    end
+
     key = display.newImageRect(objectsGroup,"Images/key.png",32,32)
     key.x = display.contentCenterX+495
     key.y = display.contentCenterY-190
@@ -658,19 +672,11 @@ function scene:create( event )
 
     playerX = player.x
 end
- 
- 
+
+
 -- show()
 function scene:show( event )
- 
-    local sceneGroup = self.view
-    local phase = event.phase
- 
-    if ( phase == "will" ) then
-        -- Code here runs when the scene is still off screen (but is about to come on screen)
- 
-    elseif ( phase == "did" ) then
-        -- Code here runs when the scene is entirely on screen
+    if ( event.phase == "did" ) then
         physics.start()
         physics.setGravity(0,15)
         activatePhysics()
@@ -687,67 +693,36 @@ function scene:show( event )
         Runtime:addEventListener("key",onPressed)
     end
 end
- 
- 
+
+
 -- hide()
 function scene:hide( event )
- 
-    local sceneGroup = self.view
-    local phase = event.phase
- 
-    if ( phase == "will" ) then
-        -- Code here runs when the scene is on screen (but is about to go off screen)
- 
-    elseif ( phase == "did" ) then
-        -- Code here runs immediately after the scene goes entirely off screen
+    if ( event.phase == "did" ) then
         audio.stop(1)
         physics.stop()
         timer.cancelAll()
+
         Runtime:removeEventListener("enterFrame",updateLevel)
         Runtime:removeEventListener("collision",onCollision)
         Runtime:removeEventListener("key",onPressed)
 
-        for x = 1,#coins do
-            display.remove(coins[x])
-        end
-
-        for x = 1,#teleports do
-            display.remove(teleports[x])
-        end
-
-        for x = 1,#platforms do
-            display.remove(platforms[x])
-        end
-
-        for x = 1,#spikes do
-            display.remove(spikes[x])
-        end
-
         composer.removeScene("level2")
     end
 end
- 
- 
+
+
 -- destroy()
 function scene:destroy( event )
- 
-    local sceneGroup = self.view
-    -- Code here runs prior to the removal of scene's view
     audio.dispose(buttonClicked)
     audio.dispose(levelTheme)
     audio.dispose(doorSound)
     audio.dispose(coinSound)
     audio.dispose(teleportSound)
 end
- 
- 
--- -----------------------------------------------------------------------------------
--- Scene event function listeners
--- -----------------------------------------------------------------------------------
+
 scene:addEventListener( "create", scene )
 scene:addEventListener( "show", scene )
 scene:addEventListener( "hide", scene )
 scene:addEventListener( "destroy", scene )
--- -----------------------------------------------------------------------------------
- 
+
 return scene

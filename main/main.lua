@@ -2,15 +2,14 @@ local composer = require("composer")
 local widget = require("widget")
 
 local background
-local mainButton
 
 local musicState = composer.setVariable("musicState",true)
 local sfxState = composer.setVariable("sfxState",true)
 
 function clicked(event)
     if event.phase == "ended" then
-        display.remove(background)
         background:removeEventListener("touch",clicked)
+        display.remove(background)
         composer.gotoScene("mainmenu")
     end
 end

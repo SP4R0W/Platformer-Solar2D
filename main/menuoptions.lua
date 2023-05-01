@@ -9,7 +9,6 @@ local scene = composer.newScene()
 
 local background
 local title
-local creator
 
 local buttonNormalSprite = "Images/buttonNormal.png"
 local font = "screengem.ttf"
@@ -20,12 +19,18 @@ local sfxState = composer.getVariable("sfxState")
 
 local musicButton
 local sfxButton
-local resetScores
+local resetButton
 local backButton
 
 local defaultScores = {25000,15000,10000,8500,7500,5000,3500,2500,1500,1000}
 
 local buttonClicked
+
+local stateText =
+{
+	[false]="off",
+	[true]="on"
+}
 
 -- functions
 
@@ -41,7 +46,7 @@ local function changeMusic()
 
     musicState = composer.getVariable("musicState")
 
-    musicButton:setLabel("Music: " .. tostring(musicState))
+    musicButton:setLabel("Music: " .. stateText[musicState])
 end
 
 local function changeSFX()
@@ -62,7 +67,7 @@ local function changeSFX()
 
     sfxState = composer.getVariable("sfxState")
 
-    sfxButton:setLabel("SFX: " .. tostring(sfxState))
+    sfxButton:setLabel("SFX: " .. stateText[sfxState])
 end
 
 local function resetScores()
@@ -107,7 +112,7 @@ function scene:create( event )
 			x = display.contentCenterX,
 			y = display.contentCenterY-100,
 			id = "menuButton1",
-			label = "Music: " .. tostring(musicState),
+			label = "Music: " .. stateText[musicState],
 			labelColor = {default={0,0,0}},
 			font = font,
 			fontSize = 30,
@@ -126,7 +131,7 @@ function scene:create( event )
 			x = display.contentCenterX,
 			y = display.contentCenterY,
 			id = "menuButton2",
-			label = "SFX: " .. tostring(sfxState),
+			label = "SFX: " .. stateText[sfxState],
 			labelColor = {default={0,0,0}},
 			font = font,
 			fontSize = 30,
@@ -173,7 +178,7 @@ function scene:create( event )
 			overFile = buttonNormalSprite
 		}
 	)
-	
+
 	backButton.alpha = 0
 	transition.fadeIn(backButton,{time=2000})
 	sceneGroup:insert(backButton)
@@ -184,29 +189,12 @@ end
 -- show()
 function scene:show( event )
 
-	local sceneGroup = self.view
-	local phase = event.phase
-
-	if ( phase == "will" ) then
-		-- Code here runs when the scene is still off screen (but is about to come on screen)
-
-	elseif ( phase == "did" ) then
-	end
 end
 
 
 -- hide()
 function scene:hide( event )
-
-	local sceneGroup = self.view
-	local phase = event.phase
-
-	if ( phase == "will" ) then
-		-- Code here runs when the scene is on screen (but is about to go off screen)
-
-	elseif ( phase == "did" ) then
-		-- Code here runs immediately after the scene goes entirely off screen
-
+	if ( event.phase == "did" ) then
         composer.removeScene("menuoptions")
 	end
 end
@@ -214,21 +202,13 @@ end
 
 -- destroy()
 function scene:destroy( event )
-
-	local sceneGroup = self.view
-	-- Code here runs prior to the removal of scene's view
 	audio.dispose(buttonClicked)
 	audio.dispose(menuTheme)
 end
 
-
--- -----------------------------------------------------------------------------------
--- Scene event function listeners
--- -----------------------------------------------------------------------------------
 scene:addEventListener( "create", scene )
 scene:addEventListener( "show", scene )
 scene:addEventListener( "hide", scene )
 scene:addEventListener( "destroy", scene )
--- -----------------------------------------------------------------------------------
 
 return scene
